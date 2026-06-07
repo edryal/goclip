@@ -1,2 +1,5 @@
-go (1.21+)
-gotk4
+Dependencies:
+
+gtk4
+cliphist
+wl-clipboard
