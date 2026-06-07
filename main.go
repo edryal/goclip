@@ -83,8 +83,18 @@ func applyMainWindowProperties(mainWindow *gtk.ApplicationWindow) {
 	mainWindow.SetTitle(applicationName)
 	mainWindow.SetDefaultSize(700, 500)
 	mainWindow.SetResizable(true)
+
+	focusController := gtk.NewEventControllerFocus()
+	focusController.ConnectLeave(func() {
+		slog.Debug("window lost focus, hiding")
+		mainWindow.SetVisible(false)
+	})
+	mainWindow.AddController(focusController)
 }
 
+// TODO: add jk and ctrl+n, ctrl+p for navigating.
+// Enter already copies the selection so sending a notification would be useful,
+// or some kind of feedback that the selection has been copied.
 func attachKeyboardShortcuts(mainWindow *gtk.ApplicationWindow) {
 	keyController := gtk.NewEventControllerKey()
 	keyController.ConnectKeyPressed(func(keyval, keycode uint, state gdk.ModifierType) bool {
@@ -266,9 +276,14 @@ func startSocketListener(mainWindow *gtk.ApplicationWindow) {
 			conn.Close()
 			slog.Debug("toggle signal received")
 			glib.IdleAdd(func() {
-				mainWindow.SetVisible(!mainWindow.IsVisible())
-				if mainWindow.IsVisible() {
+				// Automatically refresh the list so that the user doesn't have to
+				// manually press the refresh keybind in case they copied somethind.
+				if mainWindow.IsVisible() == false {
+					refreshList(mainWindow)
+					mainWindow.SetVisible(true)
 					mainWindow.Present()
+				} else {
+					mainWindow.SetVisible(false)
 				}
 			})
 		}
