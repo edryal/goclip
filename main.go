@@ -88,6 +88,9 @@ func readClipboardHistory() ([]clipboardEntry, error) {
 }
 
 func buildEntryList(entries []clipboardEntry) *gtk.ScrolledWindow {
+	// ListBox works better than a Box filled with Buttons.
+	// The normal Box had too many quirks related to the viewpoint becoming janky and the cursor's hover selection
+	// was highlighting around 2-3 buttons lower than it should, not the botton it was actually on top of
 	list := gtk.NewListBox()
 	list.SetSelectionMode(gtk.SelectionSingle)
 
@@ -99,6 +102,8 @@ func buildEntryList(entries []clipboardEntry) *gtk.ScrolledWindow {
 		label.SetMarginTop(6)
 		label.SetMarginBottom(6)
 
+		// ListBoxRow instead of Buttons since yeah it makes sense and Buttons have their own highlighting
+		// when hovered, which would layer/stack with ListBox's own hover highlighting of that row
 		row := gtk.NewListBoxRow()
 		row.SetChild(label)
 		list.Append(row)
@@ -112,6 +117,8 @@ func buildEntryList(entries []clipboardEntry) *gtk.ScrolledWindow {
 	scroll := gtk.NewScrolledWindow()
 	scroll.SetChild(list)
 	scroll.SetVExpand(true)
+
+	// Only vertical scrollbar since we ellipsize the labels anyways
 	scroll.SetPolicy(gtk.PolicyNever, gtk.PolicyAutomatic)
 
 	return scroll
