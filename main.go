@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -28,6 +29,9 @@ type clipboardEntry struct {
 	index string
 	value string
 }
+
+//go:embed resources/goclip.png
+var iconData []byte
 
 func main() {
 	initLogger()
@@ -321,13 +325,7 @@ func startSystemTray(mainWindow *gtk.ApplicationWindow) {
 }
 
 func onTrayReady(mainWindow *gtk.ApplicationWindow) {
-	data, err := os.ReadFile("/home/catalin/Projects/goclip/resources/goclip.png")
-	if err != nil {
-		slog.Error("failed to open icon file", "err", err)
-		os.Exit(1)
-	}
-
-	systray.SetIcon(data)
+	systray.SetIcon(iconData)
 	systray.SetTitle(applicationName)
 	systray.SetTooltip("goclip - clipboard manager")
 
