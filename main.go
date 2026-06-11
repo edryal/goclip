@@ -17,6 +17,7 @@ import (
 	"github.com/diamondburned/gotk4/pkg/gio/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
 	"github.com/diamondburned/gotk4/pkg/pango"
+	"github.com/energye/systray"
 )
 
 const applicationName string = "goclip"
@@ -52,7 +53,11 @@ func activate(app *gtk.Application) {
 	startSocketListener(mainWindow)
 
 	refreshList(mainWindow)
-	mainWindow.SetVisible(true)
+	startSystemTray(mainWindow)
+
+	// we want to autostart the app in the background and toggle it's visibility using a keybind
+	// so this stops the app from activating after it was autostarted by your system
+	mainWindow.SetVisible(false)
 }
 
 func handleCmdLineArgs() {
@@ -306,4 +311,48 @@ func enforceSingleInstance() {
 	// write PID into the lock file for easier debugging
 	file.WriteString(fmt.Sprintf("%d\n", os.Getpid()))
 	slog.Debug("lock acquired", "path", path, "pid", os.Getpid())
+}
+
+func startSystemTray(mainWindow *gtk.ApplicationWindow) {
+	go systray.Run(
+		func() { onTrayReady(mainWindow) },
+		func() { onTrayExit() },
+	)
+}
+
+func onTrayReady(mainWindow *gtk.ApplicationWindow) {
+	data, err := os.ReadFile("/home/catalin/Projects/goclip/resources/goclip.png")
+	if err != nil {
+		slog.Error("failed to open icon file", "err", err)
+		os.Exit(1)
+	}
+
+	systray.SetIcon(data)
+	systray.SetTitle(applicationName)
+	systray.SetTooltip("goclip - clipboard manager")
+
+	systray.SetOnRClick(func(menu systray.IMenu) {
+		menu.ShowMenu()
+	})
+
+	mRefresh := systray.AddMenuItem("Refresh", "Refresh clipboard history")
+	mRefresh.Click(func() {
+		glib.IdleAdd(func() {
+			refreshList(mainWindow)
+		})
+	})
+
+	systray.AddSeparator()
+
+	mQuit := systray.AddMenuItem("Quit", "Quit goclip")
+	mQuit.Click(func() {
+		systray.Quit()
+		glib.IdleAdd(func() {
+			mainWindow.Application().Quit()
+		})
+	})
+}
+
+func onTrayExit() {
+	slog.Debug("system tray exited")
 }
